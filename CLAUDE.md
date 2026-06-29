@@ -33,10 +33,11 @@
 ```
 marketing/
 ├── CLAUDE.md          # (이 문서) 팀 운영 가이드
+├── .claude/agents/    # 서브에이전트 정의 (단일 책임 전문가 4종)
 ├── _context/          # 브랜드·비즈니스·디자인 컨텍스트 (Source of Truth)
 ├── _templates/        # 재사용 콘텐츠 템플릿 (블로그/광고/SNS 등)
-├── docs/              # 기획서·리서치
-└── outputs/           # 결과물
+├── docs/              # 기획서·리서치·텍스트 산출물
+└── outputs/           # 비주얼 산출물 (이미지·카드뉴스)
 ```
 
 - **`_context/`** : 모든 의사결정의 기준. 임의 수정 금지, 사실 변경 시에만 갱신.
@@ -58,7 +59,43 @@ marketing/
 
 ---
 
-## 5. 콘텐츠 제작 체크리스트
+## 5. 에이전트 팀 & 라우팅
+
+이 워크스페이스는 **4개 전문 서브에이전트**로 운영합니다. 메인 Claude는 오케스트레이터로서, 사용자 요청을 아래 룰에 따라 분해·라우팅합니다. 각 에이전트 정의는 [.claude/agents/](.claude/agents/) 의 `.md` 파일이 정본입니다.
+
+### 5.1 에이전트 구성
+
+| 에이전트 | 단일 책임 | 정의 |
+| --- | --- | --- |
+| `market-researcher` | 외부 리서치 (시장·경쟁사·SEO 키워드·트렌드) | [.claude/agents/market-researcher.md](.claude/agents/market-researcher.md) |
+| `copywriter` | 한국어 카피·콘텐츠 작성 (전 채널) | [.claude/agents/copywriter.md](.claude/agents/copywriter.md) |
+| `visual-designer` | 비주얼 생성 (카드뉴스·OG·광고 이미지, nanobanana MCP) | [.claude/agents/visual-designer.md](.claude/agents/visual-designer.md) |
+| `brand-reviewer` | 가이드라인 준수 검수 (수정 권한 없음, 권고만) | [.claude/agents/brand-reviewer.md](.claude/agents/brand-reviewer.md) |
+
+### 5.2 라우팅 규칙 (요청 유형 → 호출 체인)
+
+| 요청 유형 / 키워드 | 호출 체인 |
+| --- | --- |
+| "리서치", "경쟁사 조사", "키워드 조사", "트렌드" | `market-researcher` |
+| "블로그", "SEO 글" | `market-researcher` → `copywriter` → `brand-reviewer` |
+| "랜딩 카피", "광고 카피", "SNS 게시물", "이메일", "보도자료" | `copywriter` → `brand-reviewer` |
+| "카드뉴스", "썸네일", "OG 이미지", "광고 비주얼" | `copywriter`(카피 확정) → `visual-designer`(이미지) → `brand-reviewer` |
+| "검수", "review", "가이드 체크" | `brand-reviewer` (단독) |
+| 캠페인 단위 (다채널·시리즈) | 메인 Claude가 채널별로 분할 후 각 채널을 위 룰에 따라 라우팅 (가능한 병렬화) |
+
+### 5.3 운영 원칙
+
+1. **단일 책임 존중**: 한 에이전트에게 영역 밖 업무를 강제하지 않는다. 필요한 작업이면 적합한 에이전트를 추가 호출.
+2. **컨텍스트 동기화**: 모든 에이전트는 호출 시 `CLAUDE.md` + `_context/` 관련 문서를 먼저 읽는다 (각 에이전트 정의의 "시작 시 필수 행동"에 명시).
+3. **명시적 체이닝**: 이전 단계 산출물의 **절대경로**를 다음 에이전트 호출 프롬프트에 그대로 전달한다.
+4. **검수는 마지막 게이트**: 사용자에게 산출물을 전달하기 직전 `brand-reviewer` 를 통과시킨다 (단순 리서치 요청은 예외).
+5. **병렬 처리**: 독립적인 작업(예: 같은 캠페인 내 카피와 보조 이미지)은 가능한 한 병렬 호출로 처리 시간을 단축한다.
+6. **권한 최소화**: 각 에이전트의 `tools` 목록은 책임 수행에 필요한 최소 도구로 제한 — 확장 필요 시 정의 파일을 수정하고 본 문서 라우팅 룰도 동기화한다.
+7. **에이전트 변경 절차**: 새 에이전트 추가/책임 변경 시 `.claude/agents/*.md` 수정 → 본 5절(라우팅 표/체인) 갱신을 한 PR/커밋 단위로 묶는다.
+
+---
+
+## 6. 콘텐츠 제작 체크리스트
 
 새 콘텐츠를 만들 때:
 
@@ -71,7 +108,7 @@ marketing/
 
 ---
 
-## 6. 핵심 사실 빠른 참조
+## 7. 핵심 사실 빠른 참조
 
 | 항목 | 값 |
 | --- | --- |
